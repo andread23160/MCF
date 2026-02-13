@@ -241,7 +241,7 @@ def main():
     print("Simulazione sciami\n")
 
     E0_TeV = float(input("Energia iniziale (TeV): "))
-    step_s = float(input("Passo s: "))
+    step_s = float(input("Passo 0≤s≤1: "))
     N_eventi = int(input("Numero eventi: "))
 
     E0_MeV = E0_TeV * 1e6
