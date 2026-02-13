@@ -241,20 +241,25 @@ def main():
     print("Simulazione sciami\n")
 
     E0_TeV = float(input("Energia iniziale (TeV): "))
-    step_s = float(input("Passo 0≤s≤1: "))
+    step_s = float(input("Passo 0<s≤1: "))
     N_eventi = int(input("Numero eventi: "))
 
     E0_MeV = E0_TeV * 1e6
 
-    print("\nProfilo sciame")
-    n, t_list, n_list = simulate_shower(E0_MeV, step_s, 0, dE_X0, rng, salva_sciame=True)
-
+    print("\nProfilo sciame per 0°, 20°, 40")
+    angoli = [0, 20, 40]
+    colori = {0:"red", 20: "green", 40: "blue"}
     plt.figure(figsize=(8,5))
-    plt.plot(t_list, n_list)
+
+    for theta in angoli:
+      n, t_list, n_list = simulate_shower(E0_MeV, step_s, theta, dE_X0, rng, salva_sciame = True)
+      plt.plot(t_list, n_list, color = colori[theta], label = f"{theta}°")
+      
     plt.xlabel("t (X0)")
     plt.ylabel("particelle")
-    plt.title("profilo sciame")
+    plt.title("profili dello sciame a diversi angoli")
     plt.grid(True)
+    plt.legend()
     plt.show()
 
     print("\nStudio statistico")
