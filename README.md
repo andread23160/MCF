@@ -14,16 +14,16 @@ Ogni interazione avviene dopo una lunghezza di interazione, ogni particella seco
 l'interazione di un elettrone-positrone con energia E porta alla produzione di un fotone e un elettrone o positrone, mentre un fotone con energia E genera un elettrone ed un positrone.
 Il processo si arresta quando l'energia degli elettroni scende sotto valore di energia critica E_c, l'energia quando la perdita per ionizzazione eguaglia quella per radiazione. 
 
-L'utente può scegliere: l'energia iniziale tra 1 e 100 TeV, il passo di profondità "s" tra zero e uno (compreso), con un passo di 0.1 in 0.1.
+L'utente può scegliere: l'energia iniziale tra 1 e 100 TeV, il passo di profondità "s" tra zero e uno (compreso).
 Inoltre viene svolto uno studio statistico chiedendo all'utente il numero di eventi da simulare.
 
 Il programma restituisce il profilo dei tre sciami a rispettivamente 0, 20 e 40 gradi. 
 Lo studio statistico invece rappresenta un istogramma che ci da la densità rispetto al numero di hit per i tre eventi si è inoltre sviluppato un fit con uno studio lognormale, poiché ho un fenomeno di tipo stocastico, per verificare l'andamento. 
 Il fit lognormale restituisce due parametri \mu e \sigma, il primo rappresenta la media della distribuzione del \ln(N) mentre il secondo la deviazione standard del \ln(N). Con il significato di media e fluttuazione dello sciame.
+Il grafico degli istogrammi e il fit è stato sviluppato in con gli assi logaritmici e con un numero di bins logaritmici, in modo tale da caretterizzare meglio il comportamento degli sciami.
 
 Un altro tipo di studio che è stato svolto è quello che mette in relazione il numero medio di hit al crescere dell'energia. Il tutto fittato con una retta, e il parametro \alpha della retta rappresentano quanto è lineare questa crescita.
+Questo grafico è profondamento legato al passo scelto, fino a circa 0.4s il risultato è in accordo con il modello fisico, oltre inizia ad avere problemi.
 
-L'ultimo grafico rappresenta come cambia il rapporto \sigma/\mu che misura quanto uno sciame oscilla da un evento all’altro, ovvero la stabilità dello sciame.
-NB questo serve a mostrare come il modello di Rossi utilizzato sia limitante per il vero comportamento dello sciame.
-
-
+L'ultimo grafico rappresenta come varia il rapporto \sigma/\mu, ovvero tra la deviazione standard e la media della distribuzione in rapporto alle enerie.
+Anche questo processo è profondamente legato al passo scelto, e fino a circa 0.4s mantiene il comportamento che ci aspettiamo, ovvero decrescente al crescere dell'energia.
