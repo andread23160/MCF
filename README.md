@@ -22,8 +22,10 @@ Lo studio statistico invece rappresenta un istogramma che ci da la densità risp
 Il fit lognormale restituisce due parametri \mu e \sigma, il primo rappresenta la media della distribuzione del \ln(N) mentre il secondo la deviazione standard del \ln(N). Con il significato di media e fluttuazione dello sciame.
 Il grafico degli istogrammi e il fit è stato sviluppato in con gli assi logaritmici e con un numero di bins logaritmici, in modo tale da caretterizzare meglio il comportamento degli sciami.
 
-Un altro tipo di studio che è stato svolto è quello che mette in relazione il numero medio di hit al crescere dell'energia. Il tutto fittato con una retta, e il parametro \alpha della retta rappresentano quanto è lineare questa crescita.
+Un altro tipo di studio che è stato svolto è quello che mette in relazione il numero medio di hit al crescere dell'energia al passo s inserito dall'utente. Il tutto fittato con una retta, e il parametro \alpha della retta rappresentano quanto è lineare questa crescita.
 Questo grafico è profondamento legato al passo scelto, fino a circa 0.4s il risultato è in accordo con il modello fisico, oltre inizia ad avere problemi.
 
-L'ultimo grafico rappresenta come varia il rapporto \sigma/\mu, ovvero tra la deviazione standard e la media della distribuzione in rapporto alle enerie.
+L'ultimo grafico rappresenta come varia il rapporto \sigma/\mu, ad un dato passo s inserito dall'utente, ovvero tra la deviazione standard e la media della distribuzione in rapporto all'energia.
 Anche questo processo è profondamente legato al passo scelto, e fino a circa 0.4s mantiene il comportamento che ci aspettiamo, ovvero decrescente al crescere dell'energia.
+
+Le dipendenze degli ultimi due grafici dal passo sono motivate dal fatto che il significato del passo è di quanto considero continuo il processo, se è troppo discretizzato perde il senso fisico e non ottengo un risultato realistico. (es. rapporto \sigma/\mu che cresce con l'energia o il fit di potenza non lineare.)
