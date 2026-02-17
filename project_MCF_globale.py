@@ -27,8 +27,8 @@ def simulate_shower(E0_MeV, step_s=0.1, theta_deg=0.0, dE_X0_MeV=dE_X0,
     theta_rad = np.deg2rad(theta_deg)
     t_det = lunghezza_di_radiazione / np.cos(theta_rad)
 
-    particles_type = ['g']
-    particles_E = [E0_MeV]
+    tipi = np.array([0], dtype = np.int8)
+    energie = np.array([E0_MeV], dtype = np.float32)
 
     p_brem = 1 - math.exp(-step_s)
     p_pair = 1 - math.exp(-7 * step_s / 9)
@@ -39,54 +39,60 @@ def simulate_shower(E0_MeV, step_s=0.1, theta_deg=0.0, dE_X0_MeV=dE_X0,
     profile_t = []
     profile_n = []
 
-    while t < t_det and particles_type:
+    while t < t_det and len(tipi)>0:
         t += step_s
 
         if salva_sciame:
             profile_t.append(t)
-            profile_n.append(len(particles_type))
+            profile_n.append(len(tipi))
 
-        new_type = []
-        new_E = []
+        mask_e = (tipi == 1)
+        energie[mask_e] = dE_X0_MeV*step_s
 
-        attivo = (t <= t_max)
+        attivo =  energie >0
+        tipi = tipi[attivo]
+        energie = energie[attivo]
 
-        for p_type, E in zip(particles_type, particles_E):
+        if len(tipi) == 0:
+          break
 
-            if p_type == 'e':
-                E -= dE_X0_MeV * step_s
-                if E <= 0:
-                    continue
+        mask_e = (tipi == 1) & (energie > E_el)
+        mask_g = (tipi == 0) & (energie > soglia_prod)
 
-                if attivo and E > E_el:
-                    if rng.random() < p_brem:
-                        E2 = E * 0.5
-                        new_type += ['e', 'g']
-                        new_E += [E2, E2]
-                        continue
+        r = rng.random(len(tipi))
 
-                new_type.append('e')
-                new_E.append(E)
+        do_brem = mask_e & (r<p_brem)
+        do_pair = mask_g & (r<p_pair)
 
-            else:  # fotone
-                if E <= soglia_prod:
-                    continue
+        new_tipi = []
+        new_energie = []
 
-                if attivo:
-                    if rng.random() < p_pair:
-                        E2 = E * 0.5
-                        new_type += ['e', 'e']
-                        new_E += [E2, E2]
-                    else:
-                        new_type.append('g')
-                        new_E.append(E)
-                else:
-                    new_type.append('g')
-                    new_E.append(E)
+        if np.any(do_brem):
+          E2 = energie[do_brem]*0.5
+          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
+          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
+          new_energie.appen(E2)
+          new_energie.appen(E2)
 
-        particles_type = new_type
-        particles_E = new_E
+        if np.any(do_pair):
+          E2 = energie[do_pair]*0.5
+          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
+          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
+          new_energie.appen(E2)
+          new_energie.appen(E2)
 
+        keep = (do_brem | do_pair)
+        if np.any(keep):
+            new_tipi.append(tipi[keep])
+            new_energie.append(energie[keep])
+        
+        tipi = np.concatenate(new_tipi)
+        energie = np.concatenate(new_energie)
+
+        if not np.any((tipi==1)&(energie>E_el)) and 
+             \not np.any ((tipi==0)&(energie>soglia_prod)):
+               break
+               
     if salva_sciame:
         return len(particles_type), profile_t, profile_n
     else:
@@ -136,33 +142,46 @@ def lognormal(x, mu, sigma):
 
 
 def plot_lognormal_fits_with_hist(results):
-    plt.figure(figsize=(12,7))
+    plt.figure(figsize=(14,8))
 
     colors = {0: "red", 20: "green", 40: "blue"}
 
     for theta, hits in results.items():
-        hits_pos = hits[hits > 0]
+        hits_pos = hits[hits > 0
 
-        hist, bin_edges = np.histogram(hits_pos, bins=30, density=True)
-        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+        if len(hits_pos) < 10:
+            continue
+        xmin = hits.pos.min()
+        xmax = hits.pos.max()
 
-        popt, pcov = curve_fit(
+        if xmin <= 0:
+          xmin = np.min(hits_pos[hits_pos>0])
+
+        nbins = 30
+        edges = np.logspace(np.log10(xmin), np.log10(xmax), nbins + 1)
+
+        hits, edges = np.histogram(hits_pos, bins = edges, density = True)
+        centres = np.sqrt(edges[:-1]*edges[1:])
+
+        popt, _ = curve_fit(
             lognormal,
-            bin_centers,
+            centers,
             hist,
-            p0=[np.log(np.mean(hits_pos)), 0.5]
-        )
-        mu_fit, sigma_fit = popt
+            p0=[np.log(np.mean(hits_pos)), 0.5],
+            maxfev=20000
+            )
+        mu, sigma = popt
 
-        x = np.linspace(min(hits_pos), max(hits_pos), 300)
+        x = np.logspace(np.log10(xmin),np.log10(xmax), 300)
         y = lognormal(x, mu_fit, sigma_fit)
 
-        plt.hist(hits_pos, bins=30, density=True, alpha=0.25,
+        plt.hist(hits_pos, bins=edges, density=True, alpha=0.25,
                  color=colors[theta], label=f"istogramma {theta}°")
 
-        plt.plot(x, y, color=colors[theta], linewidth=2,
-                 label=f"fit {theta}° (mu={mu_fit:.2f}, sigma={sigma_fit:.2f})")
-
+        plt.plot(x, lognormal(x,mu.sigma), color=colors[theta],
+                 label=f"{theta}°fit")
+    plt.xscale('log')
+    plt.yscale('log')
     plt.xlabel("hit")
     plt.ylabel("densità")
     plt.title("istogrammi + fit lognormali")
@@ -177,7 +196,7 @@ def power_law(E, A, alpha):
 
 
 def fit_power_law(step_s=0.1, theta=0, N=200):
-    energies = np.logspace(0, 2, 6)
+    energies = np.logspace(0, 2, 5)
     means = []
 
     rng = np.random.default_rng()
@@ -251,8 +270,10 @@ def main():
     colori = {0:"red", 20: "green", 40: "blue"}
     plt.figure(figsize=(8,5))
 
+    step_profile = 0.01
+
     for theta in angoli:
-      n, t_list, n_list = simulate_shower(E0_MeV, step_s, theta, dE_X0, rng, salva_sciame = True)
+      n, t_list, n_list = simulate_shower(E0_MeV, step_s_profile, theta, dE_X0, rng, salva_sciame = True)
       plt.plot(t_list, n_list, color = colori[theta], label = f"{theta}°")
       
     plt.xlabel("t (X0)")
