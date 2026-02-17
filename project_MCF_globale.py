@@ -27,8 +27,8 @@ def simulate_shower(E0_MeV, step_s=0.1, theta_deg=0.0, dE_X0_MeV=dE_X0,
     theta_rad = np.deg2rad(theta_deg)
     t_det = lunghezza_di_radiazione / np.cos(theta_rad)
 
-    tipi = np.array([0], dtype = np.int8)
-    energie = np.array([E0_MeV], dtype = np.float32)
+    tipi = np.array([0], dtype=np.int8)       # 0 = gamma, 1 = elettrone
+    energie = np.array([E0_MeV], dtype=np.float32)
 
     p_brem = 1 - math.exp(-step_s)
     p_pair = 1 - math.exp(-7 * step_s / 9)
@@ -39,7 +39,8 @@ def simulate_shower(E0_MeV, step_s=0.1, theta_deg=0.0, dE_X0_MeV=dE_X0,
     profile_t = []
     profile_n = []
 
-    while t < t_det and len(tipi)>0:
+    while t < t_det and len(tipi) > 0:
+
         t += step_s
 
         if salva_sciame:
@@ -47,56 +48,61 @@ def simulate_shower(E0_MeV, step_s=0.1, theta_deg=0.0, dE_X0_MeV=dE_X0,
             profile_n.append(len(tipi))
 
         mask_e = (tipi == 1)
-        energie[mask_e] = dE_X0_MeV*step_s
+        energie[mask_e] -= dE_X0_MeV * step_s
 
-        attivo =  energie >0
-        tipi = tipi[attivo]
-        energie = energie[attivo]
+        vive = energie > 0
+        tipi = tipi[vive]
+        energie = energie[vive]
 
         if len(tipi) == 0:
-          break
+            break
 
         mask_e = (tipi == 1) & (energie > E_el)
         mask_g = (tipi == 0) & (energie > soglia_prod)
 
         r = rng.random(len(tipi))
 
-        do_brem = mask_e & (r<p_brem)
-        do_pair = mask_g & (r<p_pair)
+        do_brem = mask_e & (r < p_brem)
+        do_pair = mask_g & (r < p_pair)
 
         new_tipi = []
         new_energie = []
 
         if np.any(do_brem):
-          E2 = energie[do_brem]*0.5
-          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
-          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
-          new_energie.appen(E2)
-          new_energie.appen(E2)
+            E2 = energie[do_brem] * 0.5
+            new_tipi.append(np.ones(len(E2), dtype=np.int8))   # elettrone
+            new_tipi.append(np.zeros(len(E2), dtype=np.int8))  # gamma
+            new_energie.append(E2)
+            new_energie.append(E2)
 
         if np.any(do_pair):
-          E2 = energie[do_pair]*0.5
-          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
-          new_tipi.appen(no.ones(len(E2, dtype = np.int8)))
-          new_energie.appen(E2)
-          new_energie.appen(E2)
+            E2 = energie[do_pair] * 0.5
+            new_tipi.append(np.ones(len(E2), dtype=np.int8))   # e-
+            new_tipi.append(np.ones(len(E2), dtype=np.int8))   # e+
+            new_energie.append(E2)
+            new_energie.append(E2)
 
-        keep = (do_brem | do_pair)
+        # particelle che NON interagiscono
+        keep = ~(do_brem | do_pair)
         if np.any(keep):
             new_tipi.append(tipi[keep])
             new_energie.append(energie[keep])
-        
+
         tipi = np.concatenate(new_tipi)
         energie = np.concatenate(new_energie)
 
-        if not np.any((tipi==1)&(energie>E_el)) and 
-             \not np.any ((tipi==0)&(energie>soglia_prod)):
-               break
-               
+        # condizione di arresto: nessuna particella può più interagire
+        if (
+            not np.any((tipi == 1) & (energie > E_el))
+            and
+            not np.any((tipi == 0) & (energie > soglia_prod))
+        ):
+            break
+
     if salva_sciame:
-        return len(particles_type), profile_t, profile_n
+        return len(tipi), profile_t, profile_n
     else:
-        return len(particles_type)
+        return len(tipi)
 
 
 # spettro E^-2
@@ -142,26 +148,27 @@ def lognormal(x, mu, sigma):
 
 
 def plot_lognormal_fits_with_hist(results):
-    plt.figure(figsize=(14,8))
+    plt.figure(figsize=(14, 8))
 
     colors = {0: "red", 20: "green", 40: "blue"}
 
     for theta, hits in results.items():
-        hits_pos = hits[hits > 0
+        hits_pos = hits[hits > 0]
 
         if len(hits_pos) < 10:
             continue
-        xmin = hits.pos.min()
-        xmax = hits.pos.max()
+
+        xmin = hits_pos.min()
+        xmax = hits_pos.max()
 
         if xmin <= 0:
-          xmin = np.min(hits_pos[hits_pos>0])
+            xmin = np.min(hits_pos[hits_pos > 0])
 
         nbins = 30
         edges = np.logspace(np.log10(xmin), np.log10(xmax), nbins + 1)
 
-        hits, edges = np.histogram(hits_pos, bins = edges, density = True)
-        centres = np.sqrt(edges[:-1]*edges[1:])
+        hist, edges = np.histogram(hits_pos, bins=edges, density=True)
+        centers = np.sqrt(edges[:-1] * edges[1:])
 
         popt, _ = curve_fit(
             lognormal,
@@ -169,17 +176,18 @@ def plot_lognormal_fits_with_hist(results):
             hist,
             p0=[np.log(np.mean(hits_pos)), 0.5],
             maxfev=20000
-            )
-        mu, sigma = popt
+        )
+        mu_fit, sigma_fit = popt
 
-        x = np.logspace(np.log10(xmin),np.log10(xmax), 300)
+        x = np.logspace(np.log10(xmin), np.log10(xmax), 300)
         y = lognormal(x, mu_fit, sigma_fit)
 
         plt.hist(hits_pos, bins=edges, density=True, alpha=0.25,
                  color=colors[theta], label=f"istogramma {theta}°")
 
-        plt.plot(x, lognormal(x,mu.sigma), color=colors[theta],
-                 label=f"{theta}°fit")
+        plt.plot(x, y, color=colors[theta],
+                 label=f"{theta}° fit")
+
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel("hit")
@@ -213,11 +221,11 @@ def fit_power_law(step_s=0.1, theta=0, N=200):
 
     popt, pcov = curve_fit(power_law, energies, means)
     A_fit, alpha_fit = popt
-    sigma_alpha = np.sqrt(pcov[1,1])
+    sigma_alpha = np.sqrt(pcov[1, 1])
 
     E_plot = np.logspace(0, 2, 200)
 
-    plt.figure(figsize=(8,5))
+    plt.figure(figsize=(8, 5))
     plt.loglog(energies, means, 'o')
     plt.loglog(E_plot, power_law(E_plot, A_fit, alpha_fit),
                label=f"fit: alpha={alpha_fit:.2f}±{sigma_alpha:.2f}")
@@ -244,7 +252,7 @@ def study_relative_fluctuations(step_s=0.1, theta=0, N=200):
         hits = np.array(hits)
         rel_flucts.append(hits.std() / hits.mean())
 
-    plt.figure(figsize=(8,5))
+    plt.figure(figsize=(8, 5))
     plt.semilogx(energies, rel_flucts, 'o-')
     plt.xlabel("energia [TeV]")
     plt.ylabel("sigma/mu")
@@ -267,15 +275,17 @@ def main():
 
     print("\nProfilo sciame per 0°, 20°, 40")
     angoli = [0, 20, 40]
-    colori = {0:"red", 20: "green", 40: "blue"}
-    plt.figure(figsize=(8,5))
+    colori = {0: "red", 20: "green", 40: "blue"}
+    plt.figure(figsize=(8, 5))
 
     step_profile = 0.01
 
     for theta in angoli:
-      n, t_list, n_list = simulate_shower(E0_MeV, step_s_profile, theta, dE_X0, rng, salva_sciame = True)
-      plt.plot(t_list, n_list, color = colori[theta], label = f"{theta}°")
-      
+        n, t_list, n_list = simulate_shower(
+            E0_MeV, step_profile, theta, dE_X0, rng, salva_sciame=True
+        )
+        plt.plot(t_list, n_list, color=colori[theta], label=f"{theta}°")
+
     plt.xlabel("t (X0)")
     plt.ylabel("particelle")
     plt.title("profili dello sciame a diversi angoli")
@@ -309,3 +319,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
