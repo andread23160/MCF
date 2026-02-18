@@ -33,8 +33,6 @@ def simulate_shower(E0_MeV, step_s=0.1, theta_deg=0.0, dE_X0_MeV=dE_X0,
     p_brem = 1 - math.exp(-step_s)
     p_pair = 1 - math.exp(-7 * step_s / 9)
 
-    t_max = math.log(E0_MeV / E_el) / math.log(2)
-
     t = 0.0
     profile_t = []
     profile_n = []
