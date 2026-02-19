@@ -282,6 +282,7 @@ def main():
         n, t_list, n_list = simulate_shower(
             E0_MeV, step_profile, theta, dE_X0, rng, salva_sciame=True
         )
+        print(f"Angolo {theta}°: particelle rilevate = {n}")
         plt.plot(t_list, n_list, color=colori[theta], label=f"{theta}°")
 
     plt.xlabel("t (X0)")
